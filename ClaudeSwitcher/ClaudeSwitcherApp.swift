@@ -2,11 +2,12 @@ import SwiftUI
 
 @main
 struct ClaudeSwitcherApp: App {
+    @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @StateObject private var manager = ClaudeSwapManager()
 
     var body: some Scene {
         MenuBarExtra {
-            AccountListView(manager: manager)
+            AccountListView(manager: manager, updater: appDelegate.updaterController.updater)
                 .frame(width: 320)
         } label: {
             let email = manager.activeAccount?.email ?? ""

@@ -13,9 +13,17 @@
     <key>CFBundleDisplayName</key>
     <string>Claude Switcher</string>
     <key>CFBundleVersion</key>
-    <string>1.0</string>
+    <string>1.0.1</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.0.0</string>
+    <string>1.0.1</string>
+    <key>SUFeedURL</key>
+    <string>https://claudeswitcher.candroid.dev/appcast.xml</string>
+    <key>SUPublicEDKey</key>
+    <string>REPLACE_WITH_GENERATED_PUBLIC_KEY</string>
+    <key>SUEnableAutomaticChecks</key>
+    <true/>
+    <key>SUScheduledCheckInterval</key>
+    <integer>86400</integer>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleInfoDictionaryVersion</key>

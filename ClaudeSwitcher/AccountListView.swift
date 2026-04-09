@@ -1,7 +1,9 @@
 import SwiftUI
+import Sparkle
 
 struct AccountListView: View {
     @ObservedObject var manager: ClaudeSwapManager
+    let updater: SPUUpdater
     @State private var confirmingRemove: SwapAccount?
     @State private var showInfo = false
 
@@ -135,6 +137,13 @@ struct AccountListView: View {
             }
             .buttonStyle(.plain)
             .disabled(manager.isLoading)
+
+            Divider()
+                .padding(.horizontal, 12)
+                .padding(.vertical, 4)
+
+            // Check for Updates button (Sparkle)
+            CheckForUpdatesButton(updater: updater)
 
             Divider()
                 .padding(.horizontal, 12)
