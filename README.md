@@ -159,7 +159,26 @@ To produce a signed, notarized `.app` bundle suitable for distribution, see [`sc
 
 **Switched accounts but Claude Code still uses the old one** — Close and reopen your terminal session, or start a fresh `claude` invocation. The credentials are updated in the Keychain immediately, but long-running sessions may cache them.
 
-**Menu bar icon not showing** — macOS hides menu bar extras when there's not enough room. Try quitting some menu bar apps, or use [Bartender](https://www.macbartender.com) / [Hidden Bar](https://github.com/dwarvesf/hidden) to manage the overflow.
+**Menu bar icon not showing** — this has two common causes:
+
+1. **Menu bar overflow**: macOS hides menu bar extras when there's not enough room. Try quitting some menu bar apps, or use [Bartender](https://www.macbartender.com) / [Hidden Bar](https://github.com/dwarvesf/hidden) to manage the overflow.
+
+2. **macOS menu bar compositor stuck in a bad state** (more common than it should be on macOS 15+): the system silently registers new status items with a zero-height hosting window, so they're "there" but invisible. The app is running fine, it just can't draw. Fix it in order of increasing disruption:
+
+   ```sh
+   # a) quit and relaunch ClaudeSwitcher — often enough
+   killall ClaudeSwitcher 2>/dev/null
+   open /Applications/ClaudeSwitcher.app
+
+   # b) restart the system menu bar services
+   killall SystemUIServer
+   killall ControlCenter
+   open /Applications/ClaudeSwitcher.app
+
+   # c) last resort — reboot the Mac
+   ```
+
+   This is a known system-side edge case, not a ClaudeSwitcher bug. Every other status bar app on your Mac will be affected the same way until you fix it.
 
 ## Contributing
 
