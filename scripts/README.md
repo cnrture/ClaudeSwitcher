@@ -73,6 +73,54 @@ BUNDLE_ID="com.example.ClaudeSwitcher" \
     ./scripts/release.sh
 ```
 
+## App icon
+
+The app icon workflow uses a single source-of-truth PNG and regenerates the `.icns` on every release:
+
+1. Design your icon at `1024x1024` (see spec below)
+2. Export from Figma / Sketch / Illustrator as a PNG
+3. Save it to `ClaudeSwitcher/Resources/AppIcon.png` (this path is tracked in git)
+4. Run `./scripts/make-icon.sh` to generate `AppIcon.icns` locally (optional — `release.sh` does this automatically on every build)
+5. Run `./scripts/release.sh` — it regenerates the `.icns` from the master PNG and bundles it into the app
+
+The generated `AppIcon.icns` is in `.gitignore` because it's a build artifact derived from the source PNG. Only the master PNG needs to be committed.
+
+### Quick test without a full release
+
+If you just want to verify that your icon looks right before doing a full signed/notarized build:
+
+```sh
+./scripts/make-icon.sh
+open ClaudeSwitcher/Resources/AppIcon.icns  # Preview.app shows all resolutions
+```
+
+### Design spec (Figma / Sketch)
+
+Follow Apple's [Human Interface Guidelines for macOS app icons](https://developer.apple.com/design/human-interface-guidelines/app-icons) when designing:
+
+- **Canvas**: `1024x1024` pixels
+- **Safe area**: keep the visible content inside an `824x824` box centered in the canvas (100px padding on each side)
+- **Shape**: modern macOS icons use a rounded-square ("squircle") silhouette — apply a corner radius of roughly `225px` (approximately 22% of the canvas width) to get the native look
+- **Background**: opaque; no transparent background for the body of the icon (transparency in the corners is fine — that's how the squircle shape works)
+- **Format**: PNG, 32-bit with alpha channel
+- **Export**: Figma → select frame → Export → PNG, `1x`, download
+
+### Verifying the result
+
+After running `make-icon.sh` and then `release.sh`, open `release/ClaudeSwitcher.app` in Finder. You should see the new icon in:
+
+- Finder (large and small views)
+- The Dock when the app runs
+- Launchpad
+- `Get Info` panel (`⌘I`)
+
+If the icon still looks like a generic document, try clearing the macOS icon cache:
+
+```sh
+sudo rm -rf /Library/Caches/com.apple.iconservices.store
+killall Finder Dock
+```
+
 ## Distributing to users
 
 Once `release/ClaudeSwitcher.zip` is ready:

@@ -75,6 +75,21 @@ mkdir -p "${APP_BUNDLE}/Contents/Resources"
 cp "${BINARY_PATH}" "${APP_BUNDLE}/Contents/MacOS/${APP_NAME}"
 cp "${INFO_PLIST_SRC}" "${APP_BUNDLE}/Contents/Info.plist"
 
+# regenerate AppIcon.icns from the master PNG if present, then bundle it
+ICON_PNG="${REPO_ROOT}/ClaudeSwitcher/Resources/AppIcon.png"
+ICON_ICNS="${REPO_ROOT}/ClaudeSwitcher/Resources/AppIcon.icns"
+if [[ -f "${ICON_PNG}" ]]; then
+    info "regenerating AppIcon.icns from master PNG"
+    "${REPO_ROOT}/scripts/make-icon.sh" >/dev/null
+    cp "${ICON_ICNS}" "${APP_BUNDLE}/Contents/Resources/AppIcon.icns"
+    info "bundled AppIcon.icns"
+elif [[ -f "${ICON_ICNS}" ]]; then
+    info "using existing AppIcon.icns (no master PNG found)"
+    cp "${ICON_ICNS}" "${APP_BUNDLE}/Contents/Resources/AppIcon.icns"
+else
+    info "no AppIcon found — bundle will ship without a custom icon"
+fi
+
 # copy SPM-generated resource bundle if present
 RESOURCE_BUNDLE="${BUILD_DIR}/apple/Products/Release/${APP_NAME}_${APP_NAME}.bundle"
 if [[ -d "${RESOURCE_BUNDLE}" ]]; then
