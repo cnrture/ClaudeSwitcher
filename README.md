@@ -28,6 +28,7 @@ The app safely backs up your Claude Code credentials and configuration per accou
 - **Native menu bar experience** — built with SwiftUI, uses `MenuBarExtra`, zero dock clutter
 - **Universal binary** — runs natively on both Apple Silicon and Intel Macs
 - **Signed and notarized** — no Gatekeeper warnings, distributed via an Apple-notarized binary
+- **In-app auto-updates** — powered by [Sparkle](https://sparkle-project.org), ed25519-signed, one-click install
 - **Organization aware** — shows organization names alongside each account for easy identification
 
 ## Installation
@@ -112,12 +113,28 @@ When you switch accounts, it reverses the process for the target account and mer
 
 Credentials themselves never touch the filesystem — they live entirely in the Keychain.
 
+## Auto-updates
+
+ClaudeSwitcher ships with the [Sparkle](https://sparkle-project.org) framework, the de-facto standard for macOS auto-updates (used by Sketch, Transmission, iTerm2, Alfred, and countless others).
+
+**How it works**:
+
+- The app periodically checks `https://claudeswitcher.candroid.dev/appcast.xml` in the background (roughly once per day)
+- When a new version is available, Sparkle shows a native dialog describing the release
+- You click **Install Update**, and the app downloads, verifies, installs, and relaunches automatically
+- Every release is signed with an ed25519 key; Sparkle refuses unsigned or mis-signed updates, so even a compromised server can't push malicious code
+
+You can also trigger a check manually anytime from **menu bar → Check for Updates…**
+
+If you installed via Homebrew (`brew install --cask cnrture/tap/claudeswitcher`), you can continue to use `brew upgrade --cask claudeswitcher` — both paths work.
+
 ## Privacy & Security
 
-- **No telemetry, no analytics, no network calls.** ClaudeSwitcher runs entirely offline.
+- **No telemetry, no analytics, no tracking.** The only outbound request ClaudeSwitcher ever makes is the Sparkle appcast check, which fetches a public XML file from `claudeswitcher.candroid.dev` — no identifiers, no usage data.
 - **Credentials stay in the Keychain.** Nothing sensitive is ever written to plaintext files.
 - **Config backups are owner-only** (`chmod 600`) so other users on the same machine can't read them.
 - **The binary is code-signed with a Developer ID and notarized by Apple**, so macOS can verify its integrity before every launch.
+- **Updates are ed25519-signed.** Even if the appcast host were compromised, Sparkle would refuse any update that wasn't signed with the release key.
 - **Source code is 100% open** — inspect what it does, or build it yourself.
 
 ## Building from Source
