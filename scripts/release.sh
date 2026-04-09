@@ -83,6 +83,15 @@ mkdir -p "${APP_BUNDLE}/Contents/Frameworks"
 cp "${BINARY_PATH}" "${APP_BUNDLE}/Contents/MacOS/${APP_NAME}"
 cp "${INFO_PLIST_SRC}" "${APP_BUNDLE}/Contents/Info.plist"
 
+# Swift Package Manager builds executable targets as command-line tools and
+# sets rpath to @executable_path/../lib. macOS .app bundles put frameworks in
+# Contents/Frameworks/, so we add that rpath here before code signing.
+# Without this, dyld can't find Sparkle.framework at launch and the app
+# crashes immediately with "Library not loaded: @rpath/Sparkle.framework/...".
+info "adding @executable_path/../Frameworks rpath to the binary"
+install_name_tool -add_rpath "@executable_path/../Frameworks" \
+    "${APP_BUNDLE}/Contents/MacOS/${APP_NAME}"
+
 # regenerate AppIcon.icns from the master PNG if present, then bundle it
 ICON_PNG="${REPO_ROOT}/ClaudeSwitcher/Resources/AppIcon.png"
 ICON_ICNS="${REPO_ROOT}/ClaudeSwitcher/Resources/AppIcon.icns"
