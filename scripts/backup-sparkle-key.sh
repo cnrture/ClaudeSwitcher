@@ -66,8 +66,13 @@ EOF
 
 echo
 echo "----- BEGIN SPARKLE PRIVATE KEY -----"
-cat "${TMP_FILE}"
+# strip any trailing newline then force exactly one so BEGIN/END land on
+# their own lines even when the exported file has no trailing newline
+printf '%s\n' "$(cat "${TMP_FILE}")"
 echo "----- END SPARKLE PRIVATE KEY -----"
+echo
+echo "Copy the single base64 line between BEGIN and END into your password"
+echo "manager as a Secure Note. Then clear this terminal: clear && printf '\\033[3J'"
 echo
 echo "(the temporary file at ${TMP_FILE} will be securely deleted when this script exits)"
 echo
