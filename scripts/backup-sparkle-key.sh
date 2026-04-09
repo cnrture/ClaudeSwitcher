@@ -26,15 +26,20 @@ if [[ ! -x "${GEN}" ]]; then
     exit 1
 fi
 
-TMP_FILE="$(mktemp -t sparkle-backup.XXXXXX)"
-trap 'test -f "${TMP_FILE}" && rm -P "${TMP_FILE}"' EXIT
+TMP_DIR="$(mktemp -d -t sparkle-backup.XXXXXX)"
+TMP_FILE="${TMP_DIR}/sparkle-private-key.pem"
+trap 'test -f "${TMP_FILE}" && rm -P "${TMP_FILE}"; rmdir "${TMP_DIR}" 2>/dev/null || true' EXIT
 
-# generate_keys -x <path> exports the existing private key to the given file
-"${GEN}" -x "${TMP_FILE}" >/dev/null 2>&1 || {
+# generate_keys -x <path> exports the existing private key to the given file.
+# The destination file must NOT already exist — the tool refuses to overwrite —
+# which is why we use a fresh directory from mktemp -d and point -x at a
+# sibling path inside it that doesn't exist yet.
+if ! GEN_OUTPUT=$("${GEN}" -x "${TMP_FILE}" 2>&1); then
     printf "\033[1;31merror:\033[0m generate_keys failed to export the private key\n" >&2
+    printf "       output: %s\n" "${GEN_OUTPUT}" >&2
     printf "       have you run '%s' yet? the keychain entry must exist first\n" "${GEN}" >&2
     exit 1
-}
+fi
 
 if [[ ! -s "${TMP_FILE}" ]]; then
     printf "\033[1;31merror:\033[0m exported key file is empty\n" >&2

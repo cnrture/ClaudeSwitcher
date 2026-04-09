@@ -19,7 +19,7 @@
     <key>SUFeedURL</key>
     <string>https://claudeswitcher.candroid.dev/appcast.xml</string>
     <key>SUPublicEDKey</key>
-    <string>REPLACE_WITH_GENERATED_PUBLIC_KEY</string>
+    <string>3Rz2t7QGMTJf3zDVpYSEuXFffj+WUg3+RvZJ+RtqMAk=</string>
     <key>SUEnableAutomaticChecks</key>
     <true/>
     <key>SUScheduledCheckInterval</key>
