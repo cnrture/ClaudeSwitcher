@@ -21,6 +21,9 @@ set -euo pipefail
 SIGNING_IDENTITY="${SIGNING_IDENTITY:-Developer ID Application: CANER TURE (39Z244SGXG)}"
 NOTARY_PROFILE="${NOTARY_PROFILE:-ClaudeSwitcherNotary}"
 BUNDLE_ID="${BUNDLE_ID:-com.candroid.ClaudeSwitcher}"
+SPARKLE_TOOLS="${SPARKLE_TOOLS:-${HOME}/.sparkle-tools/bin}"
+APPCAST_FILE_REL="docs/appcast.xml"
+RELEASE_URL_PREFIX="https://github.com/cnrture/ClaudeSwitcher/releases/download"
 
 # ---- paths ----
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -51,6 +54,9 @@ security find-identity -v -p codesigning 2>/dev/null | grep -qF "${SIGNING_IDENT
 xcrun notarytool history --keychain-profile "${NOTARY_PROFILE}" >/dev/null 2>&1 \
     || fail "notarytool profile '${NOTARY_PROFILE}' not found. See scripts/README.md to set it up."
 
+[[ -x "${SPARKLE_TOOLS}/sign_update" ]] \
+    || fail "Sparkle sign_update not found at ${SPARKLE_TOOLS}. Run ./scripts/setup-sparkle-tools.sh first."
+
 # ---- clean ----
 info "cleaning previous build artifacts"
 rm -rf "${APP_BUNDLE}" "${ZIP_PATH}"
@@ -71,6 +77,8 @@ BINARY_PATH="${BUILD_DIR}/apple/Products/Release/${APP_NAME}"
 info "assembling .app bundle"
 mkdir -p "${APP_BUNDLE}/Contents/MacOS"
 mkdir -p "${APP_BUNDLE}/Contents/Resources"
+
+mkdir -p "${APP_BUNDLE}/Contents/Frameworks"
 
 cp "${BINARY_PATH}" "${APP_BUNDLE}/Contents/MacOS/${APP_NAME}"
 cp "${INFO_PLIST_SRC}" "${APP_BUNDLE}/Contents/Info.plist"
@@ -96,11 +104,46 @@ if [[ -d "${RESOURCE_BUNDLE}" ]]; then
     cp -R "${RESOURCE_BUNDLE}" "${APP_BUNDLE}/Contents/Resources/"
 fi
 
+# ---- bundle Sparkle.framework ----
+info "locating Sparkle.framework in SPM artifact cache"
+SPARKLE_SRC=$(find "${BUILD_DIR}" -type d -name "Sparkle.framework" -path "*macos*" 2>/dev/null | head -1)
+if [[ -z "${SPARKLE_SRC}" ]]; then
+    # fallback: any Sparkle.framework under .build
+    SPARKLE_SRC=$(find "${BUILD_DIR}" -type d -name "Sparkle.framework" 2>/dev/null | head -1)
+fi
+[[ -d "${SPARKLE_SRC}" ]] || fail "could not find Sparkle.framework in ${BUILD_DIR}. did swift build resolve Sparkle?"
+info "copying Sparkle.framework from ${SPARKLE_SRC}"
+cp -R "${SPARKLE_SRC}" "${APP_BUNDLE}/Contents/Frameworks/Sparkle.framework"
+
 # ---- sign ----
-info "code signing with hardened runtime"
+# Nested components inside Sparkle.framework must be signed inside-out before
+# the outer .app bundle. --deep alone is unreliable for XPC services, so we
+# walk the tree explicitly.
+
+SPARKLE_FW="${APP_BUNDLE}/Contents/Frameworks/Sparkle.framework"
+SPARKLE_VERSION_DIR="${SPARKLE_FW}/Versions/B"
+[[ -d "${SPARKLE_VERSION_DIR}" ]] || SPARKLE_VERSION_DIR="${SPARKLE_FW}/Versions/A"
+
+sign_nested() {
+    local target="$1"
+    [[ -e "${target}" ]] || return 0
+    codesign --force --options runtime --timestamp \
+        --sign "${SIGNING_IDENTITY}" "${target}"
+}
+
+info "signing Sparkle XPC services and helpers"
+sign_nested "${SPARKLE_VERSION_DIR}/XPCServices/Downloader.xpc"
+sign_nested "${SPARKLE_VERSION_DIR}/XPCServices/Installer.xpc"
+sign_nested "${SPARKLE_VERSION_DIR}/Autoupdate"
+sign_nested "${SPARKLE_VERSION_DIR}/Updater.app"
+
+info "signing Sparkle.framework"
+codesign --force --options runtime --timestamp \
+    --sign "${SIGNING_IDENTITY}" "${SPARKLE_FW}"
+
+info "code signing the app bundle with hardened runtime"
 codesign \
     --force \
-    --deep \
     --options runtime \
     --timestamp \
     --entitlements "${ENTITLEMENTS}" \
@@ -135,5 +178,39 @@ rm -f "${ZIP_PATH}"
 info "gatekeeper assessment"
 spctl -a -vvv -t install "${APP_BUNDLE}" 2>&1 || true
 
+# ---- sign the release zip for Sparkle ----
+info "signing release zip with Sparkle sign_update"
+SIGN_OUTPUT=$("${SPARKLE_TOOLS}/sign_update" "${ZIP_PATH}")
+# sign_update output looks like: sparkle:edSignature="..." length="..."
+ED_SIGNATURE=$(echo "${SIGN_OUTPUT}" | sed -n 's/.*sparkle:edSignature="\([^"]*\)".*/\1/p')
+LENGTH=$(echo "${SIGN_OUTPUT}" | sed -n 's/.*length="\([^"]*\)".*/\1/p')
+[[ -n "${ED_SIGNATURE}" ]] || fail "could not extract ed25519 signature from sign_update output: ${SIGN_OUTPUT}"
+[[ -n "${LENGTH}" ]] || fail "could not extract length from sign_update output: ${SIGN_OUTPUT}"
+info "ed25519 signature: ${ED_SIGNATURE:0:16}..."
+
+# ---- update appcast ----
+VERSION=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "${INFO_PLIST_SRC}")
+BUILD=$(/usr/libexec/PlistBuddy -c "Print :CFBundleVersion" "${INFO_PLIST_SRC}")
+RELEASE_NOTES_FILE="${REPO_ROOT}/RELEASE_NOTES_${VERSION}.md"
+if [[ -f "${RELEASE_NOTES_FILE}" ]]; then
+    RELEASE_NOTES_CONTENT=$(cat "${RELEASE_NOTES_FILE}")
+else
+    RELEASE_NOTES_CONTENT="Version ${VERSION}"
+fi
+
+info "updating ${APPCAST_FILE_REL} with v${VERSION} entry"
+"${REPO_ROOT}/scripts/update-appcast.sh" \
+    --version "${VERSION}" \
+    --short-version "${VERSION}" \
+    --zip "${ZIP_PATH}" \
+    --ed-signature "${ED_SIGNATURE}" \
+    --length "${LENGTH}" \
+    --release-notes "${RELEASE_NOTES_CONTENT}"
+
 ok "release ready: ${ZIP_PATH}"
-ok "users can download, unzip, and open ${APP_NAME}.app without any warnings"
+ok "appcast updated: ${REPO_ROOT}/${APPCAST_FILE_REL}"
+ok ""
+ok "next steps (manual):"
+ok "  1. git add ${APPCAST_FILE_REL} && git commit -m 'release: appcast entry for v${VERSION}' && git push"
+ok "  2. gh release create v${VERSION} ${ZIP_PATH} --title 'ClaudeSwitcher v${VERSION}' --notes-file ${RELEASE_NOTES_FILE}"
+ok "  3. shasum -a 256 ${ZIP_PATH}  # update homebrew-tap cask with new version + sha256"
