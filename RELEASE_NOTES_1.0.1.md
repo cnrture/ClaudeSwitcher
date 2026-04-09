@@ -1,16 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
-<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
-  <channel>
-    <title>ClaudeSwitcher</title>
-    <link>https://claudeswitcher.candroid.dev/appcast.xml</link>
-    <description>ClaudeSwitcher updates</description>
-    <language>en</language>
-    <item>
-      <title>Version 1.0.1</title>
-      <sparkle:version>1.0.1</sparkle:version>
-      <sparkle:shortVersionString>1.0.1</sparkle:shortVersionString>
-      <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
-      <description><![CDATA[## What's new
+## What's new
 
 - **Custom app icon** — ClaudeSwitcher now ships with a proper icon you'll see in Finder, Launchpad, and the Get Info panel (crafted by me, with a lot of iteration 😄).
 - **In-app auto-updates** — ClaudeSwitcher now uses [Sparkle](https://sparkle-project.org) to check for new versions in the background and install them with a single click. No more checking GitHub manually or waiting for `brew upgrade`.
@@ -51,13 +39,4 @@ Future releases will install themselves automatically.
 
 ## Privacy
 
-The only outbound request ClaudeSwitcher makes is the Sparkle appcast fetch (a single public XML file). No analytics, no telemetry, no tracking, no identifiers sent anywhere.]]></description>
-      <pubDate>Thu, 09 Apr 2026 20:33:34 +0000</pubDate>
-      <enclosure
-        url="https://github.com/cnrture/ClaudeSwitcher/releases/download/v1.0.1/ClaudeSwitcher.zip"
-        sparkle:edSignature="E7ukJDvYNXlcUbLg4e7ei0OlVq6W7qXZND8x4ndlVwk1oh7a5yCcdCh2nScwvJk0eKhRNVAobzRZyx+HLK2lAA=="
-        length="2603904"
-        type="application/octet-stream"/>
-    </item>
-  </channel>
-</rss>
+The only outbound request ClaudeSwitcher makes is the Sparkle appcast fetch (a single public XML file). No analytics, no telemetry, no tracking, no identifiers sent anywhere.
